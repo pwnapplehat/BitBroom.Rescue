@@ -288,7 +288,7 @@ static int CommandPrevious(string[] args)
 
 static int CommandVersion()
 {
-    Console.WriteLine("BitBroom Rescue CLI 1.0.2");
+    Console.WriteLine("BitBroom Rescue CLI 1.0.3");
     return 0;
 }
 

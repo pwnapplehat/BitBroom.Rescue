@@ -10,6 +10,7 @@
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
       <RowDefinition Height="*"/>
       <RowDefinition Height="Auto"/>
     </Grid.RowDefinitions>
@@ -17,7 +18,7 @@
     <!-- Taskbar-style smoke tint over the acrylic (65%): the wallpaper blur stays visible,
          but text and cards keep their contrast on any wallpaper. Shown only when the
          acrylic backdrop actually applied (see OnSourceInitialized) — matches BitBroom. -->
-    <Border x:Name="SmokeTint" Grid.RowSpan="4" Background="#A60E1014" Visibility="Collapsed"/>
+    <Border x:Name="SmokeTint" Grid.RowSpan="5" Background="#A60E1014" Visibility="Collapsed"/>
 
     <!-- Icon + name as custom Header: the stock TitleBar template hardcodes the icon
          presenter to 16px, which looks tiny next to the wordmark. -->
@@ -33,8 +34,32 @@
       </ui:TitleBar.Header>
     </ui:TitleBar>
 
+    <!-- Notify-only update banner (opt-out) — links to the release; never auto-installs. -->
+    <Border Grid.Row="1" Margin="20,4,20,4" CornerRadius="8" Padding="14,10" BorderThickness="1"
+            Background="{DynamicResource ControlFillColorDefaultBrush}"
+            BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+            Visibility="{Binding UpdateBannerVisible, Converter={StaticResource BoolToVis}}">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+        <ui:SymbolIcon Symbol="ArrowDownload24" VerticalAlignment="Center" Margin="0,0,12,0"
+                       Foreground="{StaticResource Brush.Accent}"/>
+        <TextBlock Grid.Column="1" VerticalAlignment="Center" TextWrapping="Wrap"
+                   Text="{Binding UpdateText}" Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+        <StackPanel Grid.Column="2" Orientation="Horizontal">
+          <ui:Button Content="Download" Appearance="Primary" Command="{Binding OpenReleaseCommand}" Margin="0,0,8,0"/>
+          <ui:Button Content="Not now" Appearance="Transparent" Command="{Binding DismissUpdateCommand}" Margin="0,0,8,0"/>
+          <ui:Button Content="Don't check again" Appearance="Transparent" Command="{Binding StopUpdateChecksCommand}"
+                     FontSize="12"/>
+        </StackPanel>
+      </Grid>
+    </Border>
+
     <!-- Controls row -->
-    <Grid Grid.Row="1" Margin="20,8,20,8">
+    <Grid Grid.Row="2" Margin="20,8,20,8">
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="Auto"/>
         <ColumnDefinition Width="*"/>
@@ -76,7 +101,7 @@
     </Grid>
 
     <!-- Main content -->
-    <Grid Grid.Row="2" Margin="20,4,20,4">
+    <Grid Grid.Row="3" Margin="20,4,20,4">
       <Grid.RowDefinitions>
         <RowDefinition Height="Auto"/>
         <RowDefinition Height="*"/>
@@ -163,7 +188,7 @@
     </Grid>
 
     <!-- Footer -->
-    <Grid Grid.Row="3" Margin="20,8,20,16">
+    <Grid Grid.Row="4" Margin="20,8,20,16">
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="*"/>
         <ColumnDefinition Width="Auto"/>

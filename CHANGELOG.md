@@ -3,6 +3,12 @@
 All notable changes to BitBroom Rescue are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/); versioning follows [SemVer](https://semver.org/).
 
+## [1.0.3] — 2026-07-14
+
+### Added
+
+- **Optional update check.** At startup the app makes a single HTTPS call to the GitHub releases API and, if a newer version exists, shows a dismissible banner linking to the release. It is **notify-only** — it never downloads or replaces anything, which keeps the app fully portable (fitting a tool you run as Administrator from a USB stick mid-recovery). Opt out any time with **Don't check again** (persisted in `%LocalAppData%\BitBroomRescue\settings.json`). This is the only network code in BitBroom Rescue.
+
 ## [1.0.2] — 2026-07-14
 
 ### Changed

@@ -23,7 +23,11 @@ user-chosen destination. The invariants we actively defend:
   or malicious volumes must fail scans gracefully, never corrupt memory or hang.
 - **Supply chain:** the engine and CLI have zero third-party runtime dependencies.
   The GUI's single dependency is the MIT-licensed WPF UI library (pinned version,
-  source-auditable). The product makes **no network requests**.
+  source-auditable). The engine and CLI make **no network requests**. The GUI's only
+  network call is an opt-out update check: one HTTPS request to the GitHub releases API
+  at startup, which is **notify-only** — it never downloads or executes anything, and can
+  be turned off (**Don't check again**). It carries no personal data beyond a standard
+  User-Agent.
 
 ## Reporting a vulnerability
 

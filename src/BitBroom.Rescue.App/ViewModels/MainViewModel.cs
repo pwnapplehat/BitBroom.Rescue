@@ -1,6 +1,8 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using BitBroom.Rescue.App.Mvvm;
+using BitBroom.Rescue.App.Services;
 using BitBroom.Rescue.Core.Health;
 using BitBroom.Rescue.Core.Imaging;
 using BitBroom.Rescue.Core.Io;
@@ -77,6 +79,10 @@ public sealed class MainViewModel : ObservableObject
     private int _selectedCount;
     private bool _bulkSelecting;
 
+    private bool _updateBannerVisible;
+    private string _updateText = "";
+    private string _updateUrl = "";
+
     // Kept alive after a scan: result rows read their content lazily through this
     // session's open (read-only) handle when the user hits Recover.
     private RecoverySession? _session;
@@ -100,8 +106,54 @@ public sealed class MainViewModel : ObservableObject
         OpenImageCommand = new RelayCommand(_ => OpenImage(), _ => !_isBusy);
         SelectAllCommand = new RelayCommand(_ => SetAll(true));
         SelectNoneCommand = new RelayCommand(_ => SetAll(false));
+        OpenReleaseCommand = new RelayCommand(_ => OpenRelease());
+        DismissUpdateCommand = new RelayCommand(_ => UpdateBannerVisible = false);
+        StopUpdateChecksCommand = new RelayCommand(_ =>
+        {
+            RescueSettings.UpdateCheckEnabled = false;
+            RescueSettings.Save();
+            UpdateBannerVisible = false;
+        });
 
         LoadDevices();
+
+        // Notify-only: one opt-out check for a newer release. Fire-and-forget; awaits resume
+        // on the UI thread (constructed on it), and CheckAsync never throws.
+        if (RescueSettings.UpdateCheckEnabled)
+        {
+            _ = CheckForUpdatesAsync();
+        }
+    }
+
+    private async Task CheckForUpdatesAsync()
+    {
+        RescueUpdateInfo? info = await RescueUpdateService.CheckAsync();
+        if (info is null)
+        {
+            return;
+        }
+
+        _updateUrl = info.ReleasePageUrl;
+        UpdateText = $"BitBroom Rescue {info.Version.ToString(3)} is available — " +
+                     $"you're running {RescueUpdateService.CurrentVersion.ToString(3)}. It's a portable download.";
+        UpdateBannerVisible = true;
+    }
+
+    private void OpenRelease()
+    {
+        if (!string.IsNullOrEmpty(_updateUrl))
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo(_updateUrl) { UseShellExecute = true });
+            }
+            catch
+            {
+                // If the shell can't open a browser, there's nothing useful to do.
+            }
+        }
+
+        UpdateBannerVisible = false;
     }
 
     public ObservableCollection<StorageDevice> Devices { get; } = [];
@@ -118,6 +170,21 @@ public sealed class MainViewModel : ObservableObject
     public RelayCommand CancelCommand { get; }
     public AsyncRelayCommand RecoverCommand { get; }
     public AsyncRelayCommand CloneCommand { get; }
+    public RelayCommand OpenReleaseCommand { get; }
+    public RelayCommand DismissUpdateCommand { get; }
+    public RelayCommand StopUpdateChecksCommand { get; }
+
+    public bool UpdateBannerVisible
+    {
+        get => _updateBannerVisible;
+        private set => SetProperty(ref _updateBannerVisible, value);
+    }
+
+    public string UpdateText
+    {
+        get => _updateText;
+        private set => SetProperty(ref _updateText, value);
+    }
     public RelayCommand RefreshDevicesCommand { get; }
     public RelayCommand OpenImageCommand { get; }
     public RelayCommand SelectAllCommand { get; }
