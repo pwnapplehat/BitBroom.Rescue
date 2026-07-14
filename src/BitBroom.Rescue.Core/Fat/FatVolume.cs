@@ -199,6 +199,7 @@ public sealed class FatVolume
                             : "start cluster lost — content location unknown",
                         IsResident = false,
                         ContentProvider = _ => ReadContiguous(startCluster, size),
+                        ContentStreamProvider = (stream, ct) => WriteContiguous(startCluster, size, stream, ct),
                     });
                 }
 
@@ -308,6 +309,41 @@ public sealed class FatVolume
         }
 
         return output;
+    }
+
+    private long WriteContiguous(uint startCluster, long size, Stream dest, CancellationToken ct)
+    {
+        // Streaming counterpart of ReadContiguous for large files (no 2 GB byte[] ceiling).
+        if (startCluster < 2 || size <= 0)
+        {
+            return 0;
+        }
+
+        long written = 0;
+        long clusters = (size + ClusterSize - 1) / ClusterSize;
+        byte[] buffer = new byte[Math.Max(ClusterSize, 1 * 1024 * 1024)];
+        for (long i = 0; i < clusters && written < size; i++)
+        {
+            ct.ThrowIfCancellationRequested();
+            long clusterStart = ClusterToOffset((uint)(startCluster + i));
+            long clusterRemaining = Math.Min(ClusterSize, size - written);
+            long copied = 0;
+            while (copied < clusterRemaining)
+            {
+                int want = (int)Math.Min(buffer.Length, clusterRemaining - copied);
+                int got = _source.Read(clusterStart + copied, buffer, 0, want);
+                if (got <= 0)
+                {
+                    return written;
+                }
+
+                dest.Write(buffer, 0, got);
+                written += got;
+                copied += got;
+            }
+        }
+
+        return written;
     }
 
     private uint ReadFatEntry(uint cluster)

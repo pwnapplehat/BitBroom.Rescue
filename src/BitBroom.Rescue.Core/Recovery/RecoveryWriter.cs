@@ -50,29 +50,66 @@ public sealed class RecoveryWriter
             done++;
             try
             {
-                byte[] content = item.ContentProvider(cancellationToken);
                 string targetDir = item.Source == RecoverySource.Carved
                     ? Path.Combine(_destination, "carved", SafeSegment(item.Extension.Length > 0 ? item.Extension : "bin"))
                     : Path.Combine(_destination, ReconstructRelativeDir(item.OriginalPath));
                 Directory.CreateDirectory(targetDir);
 
                 string finalPath = MakeUnique(Path.Combine(targetDir, SafeSegment(item.Name)), used);
-                File.WriteAllBytes(finalPath, content);
+
+                long length;
+                if (item.ContentStreamProvider is not null)
+                {
+                    // Stream large content straight to disk — never buffer a multi-GB file
+                    // in memory, and never truncate it to a 2 GB byte[] limit.
+                    using var fs = new FileStream(finalPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 1 << 20);
+                    length = item.ContentStreamProvider(fs, cancellationToken);
+                }
+                else
+                {
+                    byte[] content = item.ContentProvider(cancellationToken);
+                    File.WriteAllBytes(finalPath, content);
+                    length = content.Length;
+                }
+
+                RestoreTimestamps(finalPath, item);
                 written++;
-                bytes += content.Length;
-                log.WriteLine($"OK   {content.Length,12:N0}  [{item.Confidence}]  {finalPath}");
+                bytes += length;
+                log.WriteLine($"OK   {length,14:N0}  [{item.Confidence}]  {finalPath}");
                 progress?.Report((done, item.Name));
             }
             catch (Exception ex)
             {
                 failed++;
-                log.WriteLine($"FAIL              {item.Name}  — {ex.Message}");
+                log.WriteLine($"FAIL                {item.Name}  — {ex.Message}");
             }
         }
 
         log.WriteLine(new string('-', 72));
         log.WriteLine($"Recovered {written} file(s), {bytes:N0} bytes. {failed} failed.");
         return new RecoveryWriteResult(written, failed, bytes, logPath);
+    }
+
+    private static void RestoreTimestamps(string path, RecoverableItem item)
+    {
+        // Best-effort: give the recovered file its original modified/created time when we know
+        // it, so timelines and "sort by date" survive recovery. Never fatal if it fails.
+        try
+        {
+            if (item.ModifiedUtc > DateTime.MinValue)
+            {
+                File.SetLastWriteTimeUtc(path, item.ModifiedUtc);
+            }
+
+            if (item.CreatedUtc > DateTime.MinValue)
+            {
+                File.SetCreationTimeUtc(path, item.CreatedUtc);
+            }
+        }
+        catch
+        {
+            // Timestamp restoration is a nicety, not a requirement.
+        }
     }
 
     private static string ReconstructRelativeDir(string? originalPath)

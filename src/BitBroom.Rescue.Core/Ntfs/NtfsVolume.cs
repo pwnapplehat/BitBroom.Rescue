@@ -208,4 +208,85 @@ public sealed class NtfsVolume
 
         return output;
     }
+
+    /// <summary>
+    /// Streams the bytes of an attribute directly into <paramref name="dest"/> without ever
+    /// buffering the whole file in memory — the path used to recover files that can exceed
+    /// 2&nbsp;GB (big videos, disk images, VM disks). Same read semantics as
+    /// <see cref="ReadAttributeData"/>: sparse runs and unreadable clusters become zeros, and
+    /// output is truncated to the real size. Returns the number of bytes written.
+    /// </summary>
+    public long WriteAttributeData(NtfsAttribute attr, Stream dest, CancellationToken cancellationToken = default)
+    {
+        if (attr.IsResident)
+        {
+            byte[] resident = attr.ResidentData ?? [];
+            dest.Write(resident, 0, resident.Length);
+            return resident.Length;
+        }
+
+        long remaining = attr.RealSize;
+        if (remaining <= 0)
+        {
+            return 0;
+        }
+
+        int clusterSize = Boot.ClusterSize;
+        long written = 0;
+        byte[] zeros = new byte[Math.Min(1 * 1024 * 1024, Math.Max(clusterSize, 65536))];
+        byte[] buffer = new byte[1 * 1024 * 1024];
+
+        foreach (DataRun run in attr.Runs)
+        {
+            if (written >= remaining)
+            {
+                break;
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+            long runBytes = run.ClusterCount * clusterSize;
+            long take = Math.Min(runBytes, remaining - written);
+
+            if (run.IsSparse)
+            {
+                WriteZeros(dest, take, zeros);
+                written += take;
+                continue;
+            }
+
+            long diskOffset = run.Lcn * clusterSize;
+            long copied = 0;
+            while (copied < take)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                int want = (int)Math.Min(buffer.Length, take - copied);
+                int got = _source.Read(diskOffset + copied, buffer, 0, want);
+                if (got <= 0)
+                {
+                    // Unreadable region — zero-fill the remainder of this run so the file
+                    // keeps its exact length and offsets, then move on (best-effort).
+                    WriteZeros(dest, take - copied, zeros);
+                    copied = take;
+                    break;
+                }
+
+                dest.Write(buffer, 0, got);
+                copied += got;
+            }
+
+            written += take;
+        }
+
+        return written;
+    }
+
+    private static void WriteZeros(Stream dest, long count, byte[] zeros)
+    {
+        while (count > 0)
+        {
+            int chunk = (int)Math.Min(zeros.Length, count);
+            dest.Write(zeros, 0, chunk);
+            count -= chunk;
+        }
+    }
 }

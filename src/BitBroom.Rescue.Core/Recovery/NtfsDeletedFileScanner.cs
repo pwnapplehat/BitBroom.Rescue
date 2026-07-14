@@ -92,6 +92,7 @@ public sealed class NtfsDeletedFileScanner
                 ConfidenceReason = reason,
                 IsResident = data.IsResident,
                 ContentProvider = _ => _volume.ReadAttributeData(captured),
+                ContentStreamProvider = (stream, ct) => _volume.WriteAttributeData(captured, stream, ct),
             });
         }
 

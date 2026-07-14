@@ -57,8 +57,22 @@ public sealed class RecoverableItem
     /// <summary>True when the entire content lives in metadata (resident) — no cluster reads needed.</summary>
     public bool IsResident { get; init; }
 
-    /// <summary>Opaque handle the engine uses to fetch the bytes when the user chooses to recover.</summary>
+    /// <summary>
+    /// Opaque handle the engine uses to fetch the bytes when the user chooses to recover.
+    /// Fine for the common (small) case; for content that can exceed ~2&nbsp;GB (large NTFS/exFAT
+    /// files, big carves) prefer <see cref="ContentStreamProvider"/>, which streams to disk
+    /// without buffering the whole file in memory.
+    /// </summary>
     public required Func<CancellationToken, byte[]> ContentProvider { get; init; }
+
+    /// <summary>
+    /// Optional streaming writer: copies the recovered content directly into the destination
+    /// <see cref="Stream"/> and returns the number of bytes written. Set for any source that
+    /// can produce files larger than <see cref="int.MaxValue"/> (so recovery never truncates a
+    /// big video or exhausts memory). When present, <see cref="RecoveryWriter"/> uses it in
+    /// preference to <see cref="ContentProvider"/>.
+    /// </summary>
+    public Func<System.IO.Stream, CancellationToken, long>? ContentStreamProvider { get; init; }
 
     /// <summary>A short, honest reason for the confidence level (shown in the UI/CLI).</summary>
     public string? ConfidenceReason { get; init; }

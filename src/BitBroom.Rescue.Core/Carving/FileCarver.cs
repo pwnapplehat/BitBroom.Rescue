@@ -116,6 +116,11 @@ public sealed class FileCarver
         return null;
     }
 
+    // Above this size we don't buffer the carve in memory to validate it — we stream it out at
+    // its structurally-determined length and report honest (Fair) confidence instead of
+    // silently truncating a multi-GB file to a 2 GB byte[] and calling it "validated".
+    private const long ValidationCap = 256L * 1024 * 1024;
+
     private RecoverableItem? TryCarveAt(FileSignature sig, long fileOffset, CancellationToken ct)
     {
         long size = DetermineSize(sig, fileOffset, ct);
@@ -124,36 +129,80 @@ public sealed class FileCarver
             return null;
         }
 
-        byte[] data = _source.ReadBestEffort(fileOffset, (int)Math.Min(size, int.MaxValue));
-        if (data.Length == 0)
-        {
-            return null;
-        }
-
-        if (sig.Validate is not null && !sig.Validate(data))
-        {
-            return null; // header matched but content isn't a coherent file — don't offer garbage
-        }
-
-        RecoveryConfidence confidence = sig.Validate is not null
-            ? RecoveryConfidence.Good        // validated coherent file
-            : RecoveryConfidence.Fair;       // header-only; may be fragmented/partial
-
         long capturedOffset = fileOffset;
-        int capturedSize = data.Length;
+
+        if (size <= ValidationCap)
+        {
+            // Small enough to buffer: read, validate, and reuse the bytes for the write.
+            byte[] data = _source.ReadBestEffort(fileOffset, (int)size);
+            if (data.Length == 0)
+            {
+                return null;
+            }
+
+            if (sig.Validate is not null && !sig.Validate(data))
+            {
+                return null; // header matched but content isn't a coherent file — don't offer garbage
+            }
+
+            byte[] captured = data;
+            return new RecoverableItem
+            {
+                Name = $"{sig.Id}_{fileOffset:x}.{sig.Extension}",
+                OriginalPath = null,
+                SizeBytes = data.Length,
+                Source = RecoverySource.Carved,
+                Confidence = sig.Validate is not null ? RecoveryConfidence.Good : RecoveryConfidence.Fair,
+                ConfidenceReason = sig.Validate is not null
+                    ? "carved and validated as a coherent " + sig.Id.ToUpperInvariant() + " file"
+                    : "carved by header signature (no end-marker validation for this type)",
+                IsResident = false,
+                ContentProvider = _ => captured,
+                ContentStreamProvider = (stream, _) =>
+                {
+                    stream.Write(captured, 0, captured.Length);
+                    return captured.Length;
+                },
+            };
+        }
+
+        // Large carve: stream at the structurally-determined length. We can't buffer it to run
+        // the byte[] validator, so we're honest about that in the confidence/reason.
+        long capturedSize = size;
         return new RecoverableItem
         {
             Name = $"{sig.Id}_{fileOffset:x}.{sig.Extension}",
             OriginalPath = null,
-            SizeBytes = data.Length,
+            SizeBytes = size,
             Source = RecoverySource.Carved,
-            Confidence = confidence,
-            ConfidenceReason = sig.Validate is not null
-                ? "carved and validated as a coherent " + sig.Id.ToUpperInvariant() + " file"
-                : "carved by header signature (no end-marker validation for this type)",
+            Confidence = RecoveryConfidence.Fair,
+            ConfidenceReason = $"carved by structure at {size / (1024 * 1024)} MB — too large to fully validate in memory",
             IsResident = false,
-            ContentProvider = _ => _source.ReadBestEffort(capturedOffset, capturedSize),
+            ContentProvider = _ => throw new InvalidOperationException(
+                "Carved file exceeds the in-memory limit; recover via streaming (RecoveryWriter uses ContentStreamProvider)."),
+            ContentStreamProvider = (stream, streamCt) => StreamRange(capturedOffset, capturedSize, stream, streamCt),
         };
+    }
+
+    private long StreamRange(long offset, long size, Stream dest, CancellationToken ct)
+    {
+        long written = 0;
+        byte[] buffer = new byte[1 * 1024 * 1024];
+        while (written < size)
+        {
+            ct.ThrowIfCancellationRequested();
+            int want = (int)Math.Min(buffer.Length, size - written);
+            int got = _source.Read(offset + written, buffer, 0, want);
+            if (got <= 0)
+            {
+                break; // unreadable region — stop best-effort
+            }
+
+            dest.Write(buffer, 0, got);
+            written += got;
+        }
+
+        return written;
     }
 
     private long DetermineSize(FileSignature sig, long fileOffset, CancellationToken ct)

@@ -148,6 +148,7 @@ public sealed class ExFatVolume
                         : "fragmented exFAT file — FAT chain may be cleared; recovered best-effort",
                     IsResident = false,
                     ContentProvider = _ => contiguous ? ReadContiguous(fc, len) : ReadChainOrContiguous(fc, len),
+                    ContentStreamProvider = (stream, ct) => WriteContiguous(fc, len, stream, ct),
                 });
             }
 
@@ -209,6 +210,43 @@ public sealed class ExFatVolume
         }
 
         return output;
+    }
+
+    private long WriteContiguous(uint firstCluster, long size, Stream dest, CancellationToken ct)
+    {
+        // Streams a contiguous cluster range straight to the destination — the path for large
+        // (multi-GB 4K/action-cam) files that must not be buffered in memory. Deleted exFAT
+        // files are overwhelmingly NoFatChain (contiguous), so this is the high-fidelity route.
+        if (firstCluster < 2 || size <= 0)
+        {
+            return 0;
+        }
+
+        long written = 0;
+        long clusters = (size + ClusterSize - 1) / ClusterSize;
+        byte[] buffer = new byte[Math.Max(ClusterSize, 1 * 1024 * 1024)];
+        for (long i = 0; i < clusters && written < size; i++)
+        {
+            ct.ThrowIfCancellationRequested();
+            long clusterStart = ClusterToOffset((uint)(firstCluster + i));
+            long clusterRemaining = Math.Min(ClusterSize, size - written);
+            long copied = 0;
+            while (copied < clusterRemaining)
+            {
+                int want = (int)Math.Min(buffer.Length, clusterRemaining - copied);
+                int got = _source.Read(clusterStart + copied, buffer, 0, want);
+                if (got <= 0)
+                {
+                    return written; // unreadable — stop best-effort
+                }
+
+                dest.Write(buffer, 0, got);
+                written += got;
+                copied += got;
+            }
+        }
+
+        return written;
     }
 
     private byte[] ReadChainOrContiguous(uint firstCluster, long size)

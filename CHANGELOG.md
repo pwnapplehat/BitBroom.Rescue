@@ -3,6 +3,21 @@
 All notable changes to BitBroom Rescue are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/); versioning follows [SemVer](https://semver.org/).
 
+## [1.0.1] — 2026-07-14
+
+Correctness fix for large files, found in a full post-release audit.
+
+### Fixed
+
+- **Files larger than 2 GB now recover correctly.** Recovery previously buffered each file into a single `byte[]`, which cannot exceed ~2 GB: NTFS/exFAT/Recycle-Bin recoveries of a bigger file failed outright, and the carver silently truncated a >2 GB carve to 2 GB and wrote it as if complete. Recovery now **streams content straight to the destination** (NTFS `$DATA`, FAT/exFAT contiguous reads, Recycle-Bin `$R` copies, and carves), so multi-gigabyte videos and disk images recover byte-exact and memory stays flat regardless of file size. Carves above an in-memory validation cap are streamed at their structurally-determined length and honestly reported as `Fair` (they can't be fully validated in memory).
+- **Original timestamps are now actually restored** on recovered files (modified/created), matching what the docs described.
+- Recycle-Bin scan no longer offers recycled *folders* as if they were single files (their `$R` is a directory), avoiding confusing per-file failures.
+
+### Verified
+
+- New streaming unit tests (byte-exact via the stream provider; NTFS streamer proven identical to the buffered reader) — 39 tests total, all green.
+- **Real-hardware byte-exact round-trips** through the shipped raw-device reader on throwaway VHDs: NTFS, exFAT and FAT32, each recovering deleted files verified by SHA-256 — including a **2.3 GB file** on NTFS and exFAT to exercise the streaming path end to end.
+
 ## [1.0.0] — 2026-07-14
 
 First release. Safety-first, open-source data recovery for Windows 10/11.

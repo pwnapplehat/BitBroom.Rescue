@@ -108,9 +108,12 @@ public static class RecycleBinScanner
             string fileName = Path.GetFileName(indexPath);
             string rName = "$R" + fileName[2..];
             string rPath = Path.Combine(binDirectory, rName);
-            if (!File.Exists(rPath) && !Directory.Exists(rPath))
+
+            // A recycled folder's $R is a directory; single-file recovery doesn't apply, so
+            // skip it rather than offering an item that would fail on write.
+            if (!File.Exists(rPath))
             {
-                continue; // orphaned index — content already purged
+                continue; // orphaned index (content purged) or a recycled directory
             }
 
             string displayName = Path.GetFileName(index.OriginalPath);
@@ -131,6 +134,12 @@ public static class RecycleBinScanner
                 ConfidenceReason = "intact file still present in the Recycle Bin — fully recoverable",
                 IsResident = false,
                 ContentProvider = _ => File.ReadAllBytes(capturedRPath),
+                ContentStreamProvider = (stream, ct) =>
+                {
+                    using FileStream src = File.OpenRead(capturedRPath);
+                    src.CopyTo(stream, 1 << 20);
+                    return src.Length;
+                },
             });
         }
 
