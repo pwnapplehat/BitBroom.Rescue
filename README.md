@@ -63,6 +63,11 @@ unzip it on a *different* drive (or a USB stick), and run.
 2. **Scan** — read-only, shows everything recoverable with confidence scores.
 3. Filter, select, **Recover** — to a *different* drive (enforced).
 
+> **"Windows protected your PC"?** On first launch Windows may show a blue SmartScreen
+> prompt — that's expected for a new app that hasn't built download reputation yet, not a
+> malware detection. Click **More info → Run anyway**. It's open source, and each release
+> ships `SHA256SUMS.txt` so you can verify your download.
+
 **CLI** — `bitbroom-rescue.exe`, same engine, scriptable:
 
 ```powershell
