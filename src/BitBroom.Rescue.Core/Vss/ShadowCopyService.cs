@@ -117,6 +117,12 @@ public static partial class ShadowCopyService
                 ConfidenceReason = $"exact previous version from a {snapTime:yyyy-MM-dd} shadow copy",
                 IsResident = false,
                 ContentProvider = _ => File.ReadAllBytes(captured),
+                ContentStreamProvider = (stream, ct) =>
+                {
+                    using FileStream src = File.OpenRead(captured);
+                    src.CopyTo(stream, 1 << 20);
+                    return src.Length;
+                },
             });
         }
 

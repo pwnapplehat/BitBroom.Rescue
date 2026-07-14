@@ -3,6 +3,13 @@
 All notable changes to BitBroom Rescue are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/); versioning follows [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+Post-release audit hardening (no user-reachable behaviour change vs 1.0.1; folds into the next release).
+
+- Applied the same streaming-write path to **Volume Shadow Copy** recovery so a >2 GB previous version can't hit the old 2 GB buffer ceiling — bringing every `RecoverableItem` producer (NTFS, FAT, exFAT, Recycle Bin, carver, VSS) onto one consistent, size-unbounded recovery path.
+- Bumped the app manifest assembly-identity version to match the product line.
+
 ## [1.0.1] — 2026-07-14
 
 Correctness fix for large files, found in a full post-release audit.
