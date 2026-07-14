@@ -4,7 +4,8 @@
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  Title="BitBroom Rescue" Width="1240" Height="820"
                  WindowStartupLocation="CenterScreen"
-                 ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica">
+                 WindowCornerPreference="Round"
+                 ExtendsContentIntoTitleBar="True" WindowBackdropType="None">
   <Grid>
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto"/>
@@ -12,6 +13,11 @@
       <RowDefinition Height="*"/>
       <RowDefinition Height="Auto"/>
     </Grid.RowDefinitions>
+
+    <!-- Taskbar-style smoke tint over the acrylic (65%): the wallpaper blur stays visible,
+         but text and cards keep their contrast on any wallpaper. Shown only when the
+         acrylic backdrop actually applied (see OnSourceInitialized) — matches BitBroom. -->
+    <Border x:Name="SmokeTint" Grid.RowSpan="4" Background="#A60E1014" Visibility="Collapsed"/>
 
     <!-- Icon + name as custom Header: the stock TitleBar template hardcodes the icon
          presenter to 16px, which looks tiny next to the wordmark. -->

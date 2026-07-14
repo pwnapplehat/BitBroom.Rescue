@@ -3,12 +3,15 @@
 All notable changes to BitBroom Rescue are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/); versioning follows [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [1.0.2] — 2026-07-14
 
-Post-release audit hardening (no user-reachable behaviour change vs 1.0.1; folds into the next release).
+### Changed
 
-- Applied the same streaming-write path to **Volume Shadow Copy** recovery so a >2 GB previous version can't hit the old 2 GB buffer ceiling — bringing every `RecoverableItem` producer (NTFS, FAT, exFAT, Recycle Bin, carver, VSS) onto one consistent, size-unbounded recovery path.
-- Bumped the app manifest assembly-identity version to match the product line.
+- **The app window now uses the same acrylic (taskbar-style wallpaper blur) backdrop as BitBroom Cleaner**, for a consistent look across the BitBroom family. It applies a 65% smoke tint over the acrylic so text and cards stay readable on any wallpaper, and falls back to the stock solid dark background on Windows 10 or when *Transparency effects* is turned off in Windows Settings (previously the window used the flatter, non-translucent Mica backdrop).
+
+### Internal
+
+- Brought **Volume Shadow Copy** recovery onto the streaming-write path so a >2 GB previous version can't hit the old 2 GB buffer ceiling — every `RecoverableItem` producer (NTFS, FAT, exFAT, Recycle Bin, carver, VSS) now uses one consistent, size-unbounded recovery path.
 
 ## [1.0.1] — 2026-07-14
 
