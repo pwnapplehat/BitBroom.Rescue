@@ -33,6 +33,11 @@ BitBroom Rescue is built the opposite way:
 - **Honest confidence, honest TRIM warnings.** Every result is scored (High / Good / Fair / Poor) with the reason. On a TRIMmed SSD we tell you the truth — deleted data is likely gone — instead of selling you hope.
 - **Free means free.** MIT licensed. Scan results are real results; recovery is never paywalled.
 
+<div align="center">
+<img src="docs/screenshots/app.png" width="820" alt="BitBroom Rescue scanning C: — 953,623 recoverable items found read-only, with per-file confidence"/>
+<br/><sub>A real scan of a live system drive: 953k deleted files enumerated read-only in ~10 seconds, each with source and scored confidence.</sub>
+</div>
+
 ## What it recovers
 
 | Source | How | Confidence |
