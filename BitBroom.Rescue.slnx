@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/BitBroom.Rescue.App/BitBroom.Rescue.App.csproj" />
+    <Project Path="src/BitBroom.Rescue.Cli/BitBroom.Rescue.Cli.csproj" />
+    <Project Path="src/BitBroom.Rescue.Core/BitBroom.Rescue.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/BitBroom.Rescue.Core.Tests/BitBroom.Rescue.Core.Tests.csproj" />
+  </Folder>
+</Solution>

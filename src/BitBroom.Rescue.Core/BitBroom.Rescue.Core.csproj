@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <RootNamespace>BitBroom.Rescue.Core</RootNamespace>
+    <AssemblyName>BitBroom.Rescue.Core</AssemblyName>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Description>BitBroom Rescue engine: safety-first, read-only data recovery for Windows (NTFS/FAT/exFAT undelete, file carving, imaging).</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="BitBroom.Rescue.Core.Tests" />
+  </ItemGroup>
+
+</Project>

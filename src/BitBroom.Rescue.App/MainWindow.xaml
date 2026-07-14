@@ -1,0 +1,180 @@
+<ui:FluentWindow x:Class="BitBroom.Rescue.App.MainWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 Title="BitBroom Rescue" Width="1240" Height="820"
+                 WindowStartupLocation="CenterScreen"
+                 ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica">
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <!-- Icon + name as custom Header: the stock TitleBar template hardcodes the icon
+         presenter to 16px, which looks tiny next to the wordmark. -->
+    <ui:TitleBar Grid.Row="0" Grid.ColumnSpan="2">
+      <ui:TitleBar.Header>
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
+          <Image Source="pack://application:,,,/Assets/icon.png" Width="24" Height="24"
+                 VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"
+                 UseLayoutRounding="True" SnapsToDevicePixels="True"/>
+          <TextBlock Text="BitBroom Rescue" FontSize="12" VerticalAlignment="Center" Margin="10,0,0,0"
+                     Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+        </StackPanel>
+      </ui:TitleBar.Header>
+    </ui:TitleBar>
+
+    <!-- Controls row -->
+    <Grid Grid.Row="1" Margin="20,8,20,8">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="Auto"/>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="Auto"/>
+      </Grid.ColumnDefinitions>
+
+      <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+        <TextBlock Text="Drive:" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+        <ComboBox x:Name="DeviceCombo" MinWidth="300" ItemsSource="{Binding Devices}"
+                  SelectedItem="{Binding SelectedDevice, Mode=TwoWay}">
+          <ComboBox.ItemTemplate>
+            <DataTemplate>
+              <StackPanel Orientation="Horizontal">
+                <TextBlock Text="{Binding Label}" FontWeight="SemiBold"/>
+                <TextBlock Text="{Binding FileSystem}" Margin="10,0,0,0"
+                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
+              </StackPanel>
+            </DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
+        <ui:Button Icon="{ui:SymbolIcon ArrowClockwise24}" Margin="8,0,0,0"
+                   Command="{Binding RefreshDevicesCommand}" ToolTip="Refresh drive list"/>
+        <ui:Button Content="Open image…" Icon="{ui:SymbolIcon FolderOpen24}" Margin="8,0,0,0"
+                   Command="{Binding OpenImageCommand}"
+                   ToolTip="Open a disk image (.img/.dd/.bin) created by Clone and scan it like a drive"/>
+        <ui:Button Content="Clone to image…" Icon="{ui:SymbolIcon Copy24}" Margin="8,0,0,0"
+                   Command="{Binding CloneCommand}"
+                   ToolTip="ddrescue-style read-only clone: for failing drives, image FIRST, then scan the image"/>
+        <CheckBox Content="Also carve for lost files (slower, no names)" Margin="18,0,0,0"
+                  IsChecked="{Binding IncludeCarving}" VerticalAlignment="Center"/>
+      </StackPanel>
+
+      <StackPanel Grid.Column="2" Orientation="Horizontal">
+        <ui:Button Content="Cancel" Command="{Binding CancelCommand}" Margin="0,0,8,0"
+                   Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}"/>
+        <ui:Button Content="Scan" Appearance="Primary" Command="{Binding ScanCommand}" MinWidth="110"
+                   Icon="{ui:SymbolIcon Search24}"/>
+      </StackPanel>
+    </Grid>
+
+    <!-- Main content -->
+    <Grid Grid.Row="2" Margin="20,4,20,4">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="*"/>
+      </Grid.RowDefinitions>
+
+      <!-- Health warnings -->
+      <ItemsControl Grid.Row="0" ItemsSource="{Binding Warnings}" Margin="0,0,0,8">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate>
+            <Border CornerRadius="8" Padding="12,8" Margin="0,0,0,6"
+                    Background="{DynamicResource ControlFillColorDefaultBrush}"
+                    BorderThickness="1" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
+              <StackPanel Orientation="Horizontal">
+                <TextBlock Text="{Binding Severity}" FontWeight="Bold" MinWidth="70"
+                           Foreground="{StaticResource Brush.Fair}"/>
+                <StackPanel>
+                  <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                  <TextBlock Text="{Binding Detail}" TextWrapping="Wrap"
+                             Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="12.5"/>
+                </StackPanel>
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <!-- Results (plain Border card: stretches its child, unlike ui:Card) -->
+      <Border Grid.Row="1" CornerRadius="8" BorderThickness="1"
+              Background="{DynamicResource ControlFillColorDefaultBrush}"
+              BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
+        <Grid>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+          </Grid.RowDefinitions>
+
+          <ui:TextBox Grid.Row="0" Margin="10,10,10,4" Icon="{ui:SymbolIcon Filter24}"
+                      PlaceholderText="Filter by name or original path…"
+                      Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged, Delay=250}"/>
+
+          <Grid Grid.Row="1">
+          <DataGrid x:Name="ResultsGrid" ItemsSource="{Binding Results}" AutoGenerateColumns="False"
+                    IsReadOnly="False" HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                    Background="Transparent" BorderThickness="0" CanUserAddRows="False"
+                    EnableRowVirtualization="True" VirtualizingPanel.IsVirtualizing="True"
+                    VirtualizingPanel.VirtualizationMode="Recycling">
+            <DataGrid.Columns>
+              <DataGridCheckBoxColumn Binding="{Binding Selected, UpdateSourceTrigger=PropertyChanged}" Width="40"/>
+              <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="220" IsReadOnly="True"/>
+              <DataGridTextColumn Header="Original path" Binding="{Binding Path}" Width="*" IsReadOnly="True"/>
+              <DataGridTextColumn Header="Size" Binding="{Binding SizeText}" Width="90" IsReadOnly="True"/>
+              <DataGridTextColumn Header="Modified" Binding="{Binding Modified}" Width="140" IsReadOnly="True"/>
+              <DataGridTextColumn Header="Source" Binding="{Binding SourceText}" Width="120" IsReadOnly="True"/>
+              <DataGridTemplateColumn Header="Confidence" Width="110">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <Border CornerRadius="6" Padding="8,2" HorizontalAlignment="Left"
+                            Background="{Binding ConfidenceColor}">
+                      <TextBlock Text="{Binding Confidence}" Foreground="#06131C" FontWeight="SemiBold" FontSize="11.5"/>
+                    </Border>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+            </DataGrid.Columns>
+          </DataGrid>
+
+          <TextBlock Text="No results yet — pick a drive and Scan."
+                     HorizontalAlignment="Center" VerticalAlignment="Center"
+                     Foreground="{DynamicResource TextFillColorTertiaryBrush}">
+            <TextBlock.Style>
+              <Style TargetType="TextBlock">
+                <Setter Property="Visibility" Value="Collapsed"/>
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding Results.Count}" Value="0">
+                    <Setter Property="Visibility" Value="Visible"/>
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </TextBlock.Style>
+          </TextBlock>
+          </Grid>
+        </Grid>
+      </Border>
+    </Grid>
+
+    <!-- Footer -->
+    <Grid Grid.Row="3" Margin="20,8,20,16">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="Auto"/>
+      </Grid.ColumnDefinitions>
+      <StackPanel VerticalAlignment="Center">
+        <TextBlock Text="{Binding Status}" TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+        <TextBlock Text="{Binding ProgressText}" Foreground="{StaticResource Brush.Accent}" FontSize="12.5"
+                   Visibility="{Binding ProgressText, Converter={StaticResource NullToVis}}"/>
+      </StackPanel>
+      <StackPanel Grid.Column="1" Orientation="Horizontal">
+        <TextBlock Text="{Binding ResultSummary}" VerticalAlignment="Center" Margin="0,0,14,0"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+        <ui:Button Content="Select all" Appearance="Transparent" Command="{Binding SelectAllCommand}" Margin="0,0,6,0"/>
+        <ui:Button Content="None" Appearance="Transparent" Command="{Binding SelectNoneCommand}" Margin="0,0,12,0"/>
+        <ui:Button Content="Recover selected…" Appearance="Primary" MinWidth="160"
+                   Command="{Binding RecoverCommand}" Icon="{ui:SymbolIcon Save24}"/>
+      </StackPanel>
+    </Grid>
+  </Grid>
+</ui:FluentWindow>

@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>BitBroom.Rescue.App</RootNamespace>
+    <AssemblyName>BitBroomRescue</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon Condition="Exists('..\..\assets\icon.ico')">..\..\assets\icon.ico</ApplicationIcon>
+    <Description>BitBroom Rescue — safety-first data recovery for Windows.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BitBroom.Rescue.Core\BitBroom.Rescue.Core.csproj" />
+    <PackageReference Include="WPF-UI" Version="4.3.0" />
+  </ItemGroup>
+
+  <!-- High-res master for in-app rendering: WPF only decodes a single (usually small)
+       frame from an .ico, which upscales blurry; the PNG downscales crisply. -->
+  <ItemGroup Condition="Exists('..\..\assets\icon.png')">
+    <Resource Include="..\..\assets\icon.png" Link="Assets\icon.png" />
+  </ItemGroup>
+
+</Project>

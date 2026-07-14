@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+
+# Releases are cut manually from locally built + smoke-tested artifacts.
+# CI validates every push/PR/tag and publishes binaries as build artifacts.
+jobs:
+  build-test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore
+        run: dotnet restore BitBroom.Rescue.slnx
+
+      - name: Build
+        run: dotnet build BitBroom.Rescue.slnx -c Release --no-restore
+
+      - name: Test
+        run: dotnet test tests/BitBroom.Rescue.Core.Tests/BitBroom.Rescue.Core.Tests.csproj -c Release --no-build --verbosity normal
+
+      - name: Publish (win-x64)
+        run: ./build/publish.ps1 -Runtime win-x64
+        shell: pwsh
+
+      - name: Publish (win-arm64)
+        run: ./build/publish.ps1 -Runtime win-arm64
+        shell: pwsh
+
+      - name: Upload artifacts (x64)
+        uses: actions/upload-artifact@v4
+        with:
+          name: BitBroomRescue-win-x64
+          path: dist/win-x64/
+
+      - name: Upload artifacts (arm64)
+        uses: actions/upload-artifact@v4
+        with:
+          name: BitBroomRescue-win-arm64
+          path: dist/win-arm64/
