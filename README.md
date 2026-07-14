@@ -7,7 +7,7 @@
 **Safety-first, open-source data recovery for Windows 10/11.**
 Deleted a file? Formatted a card? Drive failing? Get your data back — without making things worse.
 
-[![Website](https://img.shields.io/badge/bitbroom.app-38BDF8?label=website)](https://bitbroom.app)
+[![Website](https://img.shields.io/badge/bitbroom.app%2Frescue-F59E0B?label=website)](https://bitbroom.app/rescue/)
 [![CI](https://github.com/pwnapplehat/BitBroom.Rescue/actions/workflows/ci.yml/badge.svg)](https://github.com/pwnapplehat/BitBroom.Rescue/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-blueviolet)](https://dotnet.microsoft.com/)
