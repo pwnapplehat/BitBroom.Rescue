@@ -6,6 +6,9 @@ dist/
 artifacts/
 TestResults/
 
+# Wrangler/Cloudflare local cache (contains account id/email — never commit)
+.wrangler/
+
 # User-specific files
 *.user
 *.suo
